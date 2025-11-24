@@ -161,5 +161,13 @@ npm use npm源名
 
 
 
+## 非开发其他有用工具
+
+### 超级右键
+
+[官网](https://www.better365.cn/irightmousepro.html)
+
+Mac新建文件需要先打开软件再新建，与Win不同可以直接通过右键新建。安装了超级右键后即可使Mac具有和Win一样的右键功能
+
 
 
