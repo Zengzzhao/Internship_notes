@@ -100,7 +100,21 @@ cmd（Common Prompt，Windows的传统命令后，源于DOS系统）、powershel
 
 ## .zshrc文件
 
-.zshrc是mac上Z Shell的用户级运行时配置文件，当启动zsh时会自动执行这个文件里的命令，设置好命令行环境。（该文件的内容包含了系统环境变量，类似windows的系统环境变量）
+.zshrc是mac上Z Shell的用户级运行时配置文件，当启动zsh时会先读取系统的全局配置文件（例如：`/etc/zshrc`, `/etc/paths`, `/etc/paths.d/`）然后在读取该文件，从而设置好命令行环境。（这些文件的内容包含了系统环境变量，类似windows的系统环境变量；其中.zshrc中的配置是当前用户的用户级别的环境变量）
+
+
+
+# mac自带内容
+
+## python
+
+mac自带python3，在终端中输入
+
+```shell
+python3
+```
+
+即可运行python
 
 
 
@@ -110,7 +124,7 @@ cmd（Common Prompt，Windows的传统命令后，源于DOS系统）、powershel
 
 [破解软件下载网站](https://xclient.info/)
 
-## 打不开xxx，因为来自身份不明的开发者：解决
+## 打不开xxx，因为来自身份不明的开发者的解决方法
 
 原因：在MAC下安装一些软件时提示"来自身份不明开发者"，这是MAC启用了安全机制。默认只信任Mac App Store下载的软件和拥有开发者 ID 签名的应用程序。
 
