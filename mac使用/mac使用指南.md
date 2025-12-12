@@ -20,7 +20,7 @@
 
 切换输入法：`fn/control 空格`，切换了输入法后大小写切换为`capslock`，中英文切换为`shift`
 
-显示/隐藏.开头的隐藏文件：`control shift .`
+显示/隐藏.开头的隐藏文件：`command shift .`
 
 强制退出应用程序：`option command esc`
 
