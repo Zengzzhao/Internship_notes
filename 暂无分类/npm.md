@@ -6,11 +6,11 @@ npm config list：列出所有的 npm 配置信息
 
 npm init xxx与npm create xxx是等价，两者只是别名，可以互换使用
 
-**npm init/create vite@latest背后做的事情：**（vite脚手架工具包名称为create-vite）
-
-1. 添加create-前缀：如果提供的名字没有以create-开头，npm会自动加上该前缀，这里将vite添加create-前缀形成名称create-vite
-
-2. 查找官方包并运行，这里是查找名为create-vite的包并运行
+> **npm init/create vite@latest背后做的事情：**（vite脚手架工具包名称为create-vite）
+>
+> 1. 添加create-前缀：如果提供的名字没有以create-开头，npm会自动加上该前缀，这里将vite添加create-前缀形成名称create-vite
+>
+> 2. 查找官方包并运行，这里是查找名为create-vite的包并运行
 
 
 
@@ -121,29 +121,29 @@ npx nodemon xxx运行
 
 作为npm包作者，只要处理ESM、CJS格式就行了，对于ts版本则再加一个.d.ts的类型声明文件
 
-### ESM
+**ESM**
 
 ESModule格式，官方标准，支持tree-shaking
 
 在现代浏览器、node大于14的环境都可以使用
 
-### CJS
+**CJS**
 
 CommonJs格式，不支持tree-shaking
 
 在node环境中可以使用
 
-### AMD
+**AMD**
 
 浏览器的第一代模块系统，使用Requirejs
 
-### IIFE
+**IIFE**
 
 立即执行函数
 
 通过`<script>`标签直接使用
 
-### UMD
+**UMD**
 
 Universal Module Definition
 
@@ -170,6 +170,8 @@ Universal Module Definition
 
 <img src=".\npm.assets\image-20250306202733048.png" alt="image-20250306202733048" style="zoom: 50%;" />
 
+如果是使用pnpm，运行`package.json`中的`script`脚本时可以省略`run`，直接运行脚本
+
 ## npm的生命周期
 
 ```json
@@ -188,3 +190,138 @@ prepare：安装依赖前、npm publish前，执行npm run prepare运行该脚�
 
 
 
+# npm发包
+
+## 使用changeset管理变更集
+
+安装
+
+```bash
+npm i @changesets/cli
+```
+
+初始化
+
+```bash
+pnpm changeset init
+```
+
+运行初始化后，会在根目录下创建一个`.changeset`文件夹，包含配置文件`config.json`
+
+完成一个功能/修复后，创建changeset添加变更记录
+
+```bash
+pnpm changeset
+```
+
+之后会交互式提示问你选择要发布的包、选择版本类型、输入变更描述。之后会在`.changeset`文件夹下生成一个`xxx.md`文件记录变更。可以累计多个变更记录直到想要发布时再进行消费。
+
+发布前，消费所有changeset并自动根据changeset更新package.json中的version版本，同时生成/更新`CHANGELOG.md`
+
+```bash
+pnpm changeset version
+```
+
+提交到git仓库
+
+```bash
+git add .
+git commit -m 'xxx'
+```
+
+发布更新包
+
+```bash
+pnpm run build
+pnpm changeset publish
+# pnpm changeset publish自动给上一步的commit打上当前版本的tag
+```
+
+推送到远程仓库
+
+```bash
+git push && git push --tags
+```
+
+
+
+## github actions实现CICD自动发包
+
+**workflow** ：持续集成一次运行的过程，就是一个 workflow。
+
+**job** ：一个 workflow 由一个或多个 jobs 构成，含义是一次持续集成的运行，可以完成多个任务。
+
+**step**：每个 job 由多个 step 构成，一步步完成。
+
+**action** ：每个 step 可以依次执行一个或多个命令（action）。
+
+GitHub Actions的配置文件叫做workflow文件，存放在代码仓库的`.github/workflows`目录。workflow 文件采用YAML格式，文件名可以任意取，后缀统一为`.yml`
+
+```yaml
+# workflow的名称。如果省略该字段，默认为当前workflow的文件名
+name: Release
+on: # 指定触发workflow的条件
+  push: # push事件触发workflow
+    branches:
+      - main # 只要在main分支上push才出发workflow
+
+# workflow文件的主体是jobs字段，表示要执行的一项或多项任务
+jobs:
+  release:
+    name: Release # name就是job任务说明
+    runs-on: ubuntu-latest # 运行所需要的虚拟机环境
+		
+		# steps字段指定每个Job的运行步骤，可以包含一个或多个步骤
+    steps:
+      - name: Checkout Branch # name就是steps步骤说明
+        uses: actions/checkout@v4 # 使用写好的actions(owner/repo@ref),actions/checkout@v4表示GitHub 官方账号 actions下的checkout仓库,使用v4这个版本
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with: # 给uses的action传递参数
+          version: 10
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install Dependencies
+        run: pnpm install # 在终端执行该shell命令
+
+      - name: Build Packages
+        run: pnpm run build
+
+      - name: Publish to npm
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          publish: pnpm changeset publish #  无 changeset的xxx.md 时执行的发布命令
+        env: # 给当前step设置环境变量
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # 用于创建 PR
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }} # 用于发布到 npm
+```
+
+其中GITHUB_TOKEN有github action自动提供，但需要给github action配置权限，步骤如下
+
+    1. 该仓库 Settings → Actions → General
+    2. 滚动到 Workflow permissions
+    3. 选择 Read and write permissions
+    4. 勾选 Allow GitHub Actions to create and approve pull requests
+    5. 点击 Save
+
+其中NPM_TOKEN需要自己先去npm官网上建立一个access tokens，然后将该token配置到仓库中，配置步骤如下：
+
+1. GitHub 仓库 → Settings → Secrets and variables → Actions
+2. 点击 New repository secret
+3. Name 填 NPM_TOKEN，Value 填刚才的 token
+
+改action的工作流程：
+
+    1. 开发阶段：本地运行 pnpm changeset 添加变更记录生成一个changeset的xxx.md文件
+    2. 推送到 main：GitHub Actions 自动运行
+    3. changesets/action 检测到 changeset 的 xxx.md 文件：action 运行 changeset version 更新 package.json 中的版本号、更新 CHANGELOG.md、创建一个名为 "Version Packages" 的 PR，同时删除该 changeset 的 xxx.md 文件
+    4. 我们审核该 PR 合并到 main 后再次触发 Action，由于本次无 changeset 的 xxx.md 文件，执行 publish 命令，运行配置的 pnpm changeset publish 发布脚本，发包到 npm，同时自动创建 GitHub Release 和 Git Tag
+
+> 如果当前不想发布，单纯为了更新远程仓库，则不必运行pnpm changeset直接常规流程push即可。不会导致 changeset 的 action 进行上述 PR 和发包的操作。因为直接push时package.json中的版本号并没有改变，所以不会发包。而合并 PR 时，版本号已被 PR 更新，所以会发包。
