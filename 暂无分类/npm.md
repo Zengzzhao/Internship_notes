@@ -249,7 +249,7 @@ git push && git push --tags
 
 **workflow** ：持续集成一次运行的过程，就是一个 workflow。
 
-**job** ：一个 workflow 由一个或多个 jobs 构成，含义是一次持续集成的运行，可以完成多个任务。
+**job** ：一个 workflow 由一个或多个 jobs 构成，同一个job的各个step在同一台机器、文件系统，不同job是不同机器，互相隔离。
 
 **step**：每个 job 由多个 step 构成，一步步完成。
 
@@ -260,7 +260,8 @@ GitHub Actions的配置文件叫做workflow文件，存放在代码仓库的`.gi
 ```yaml
 # workflow的名称。如果省略该字段，默认为当前workflow的文件名
 name: Release
-on: # 指定触发workflow的条件
+# 指定触发workflow的条件
+on:
   push: # push事件触发workflow
     branches:
       - main # 只要在main分支上push才出发workflow
@@ -305,11 +306,11 @@ jobs:
 
 其中GITHUB_TOKEN有github action自动提供，但需要给github action配置权限，步骤如下
 
-    1. 该仓库 Settings → Actions → General
-    2. 滚动到 Workflow permissions
-    3. 选择 Read and write permissions
-    4. 勾选 Allow GitHub Actions to create and approve pull requests
-    5. 点击 Save
+1. 该仓库 Settings → Actions → General
+2. 滚动到 Workflow permissions
+3. 选择 Read and write permissions
+4. 勾选 Allow GitHub Actions to create and approve pull requests
+5. 点击 Save
 
 其中NPM_TOKEN需要自己先去npm官网上建立一个access tokens，然后将该token配置到仓库中，配置步骤如下：
 
@@ -317,11 +318,12 @@ jobs:
 2. 点击 New repository secret
 3. Name 填 NPM_TOKEN，Value 填刚才的 token
 
-改action的工作流程：
+action的工作流程：
 
-    1. 开发阶段：本地运行 pnpm changeset 添加变更记录生成一个changeset的xxx.md文件
-    2. 推送到 main：GitHub Actions 自动运行
-    3. changesets/action 检测到 changeset 的 xxx.md 文件：action 运行 changeset version 更新 package.json 中的版本号、更新 CHANGELOG.md、创建一个名为 "Version Packages" 的 PR，同时删除该 changeset 的 xxx.md 文件
-    4. 我们审核该 PR 合并到 main 后再次触发 Action，由于本次无 changeset 的 xxx.md 文件，执行 publish 命令，运行配置的 pnpm changeset publish 发布脚本，发包到 npm，同时自动创建 GitHub Release 和 Git Tag
+1. 开发阶段：本地运行 pnpm changeset 添加变更记录生成一个changeset的xxx.md文件
+2. 推送到 main：GitHub Actions 自动运行
+3. changesets/action 检测到 changeset 的 xxx.md 文件：action 运行 changeset version 更新 package.json 中的版本号、更新 CHANGELOG.md、创建一个名为 "Version Packages" 的 PR，同时删除该 changeset 的 xxx.md 文件
+4. 我们审核该 PR 合并到 main 后再次触发 Action，由于本次无 changeset 的 xxx.md 文件，执行 publish 命令，运行配置的 pnpm changeset publish 发布脚本，发包到 npm，同时自动创建 GitHub Release 和 Git Tag
 
 > 如果当前不想发布，单纯为了更新远程仓库，则不必运行pnpm changeset直接常规流程push即可。不会导致 changeset 的 action 进行上述 PR 和发包的操作。因为直接push时package.json中的版本号并没有改变，所以不会发包。而合并 PR 时，版本号已被 PR 更新，所以会发包。
+

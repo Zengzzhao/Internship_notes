@@ -92,7 +92,7 @@ workspace将monorepo中的包正确连接成模块的机制
 pnpm -F 子包1 add 子包2 --workspace
 ```
 
-这样子包1的package.json中对应子包2的依赖版本为`workspace:*`，而不是`workspace:^x.x.x`，这样可以确保依赖的是最新版本，不用手动修改。当我们用 `pnpm publish` 发包的时候，pnpm会将 `workspace:` 替换为实际的版本。
+这样子包1的package.json中对应子包2的依赖版本为`workspace:*`，而不是具体版本，这样可以确保子包2更新发包后，子包1不需要再次显式下载子包2的最新版本，使用`workspace:*`用的就是最新版本。当我们用 `pnpm publish` 发包的时候，pnpm会将 `workspace:` 替换为实际的版本。
 
 
 
@@ -222,7 +222,35 @@ pnpm -Dw add typescript @types/node
 
 ### 代码风格与质量检查
 
+#### editorconfig
+
+确保开发者在不同的编辑器IDE中开发代码风格一致
+
+建立`.editorconfig`文件进行配置
+
+```
+root = true
+
+[*]
+indent_style = space 缩进使用空格
+indent_size = 2	一个缩进对应两个空格，按下tab时对应一个缩进，此时空两个空格
+end_of_line = lf 换行符使用LF格式
+charset = utf-8 文件编码统一用utf-8
+trim_trailing_whitespace = true 删除每行行尾的空格
+insert_final_newline = true	在文件末尾自动插入一个空行
+
+[*.md]
+trim_trailing_whitespace = false
+
+```
+
+`vscode`编辑器上要搭配`editorconfig`必须下载插件`EditorConfig for VS Code`，这样在我们保存代码时会自动按照配置统一风格
+
 #### prettier
+
+`vscode`安装`Prettier - Code formatter`插件后，该插件就自带了默认配置，当我们没有`prettier`配置文件时会使用插件默认配置格式化。插件应用配置优先使用项目目录下的`prettier.config.js`配置文件，若没有则使用插件默认配置。
+
+`prettier`配置文件供给`vscode`插件、`prettier`依赖库使用。通过`vscode`格式化快捷键来格式化代码是通过插件（插件读取`prettier`配置文件）实现的，而通过命令行运行格式化命令`prettier --write`是通过`prettier`依赖库（插件读取`prettier`配置文件）实现的。如果只是想在开发时格式化代码安装插件即可，如果想要实现CICD提交代码时自动格式化代码则需要安装`prettier`依赖库来运行命令行命令
 
 `prettier`安装
 
