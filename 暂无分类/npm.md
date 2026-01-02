@@ -48,6 +48,7 @@ npm init xxx与npm create xxx是等价，两者只是别名，可以互换使用
       "types":"指定typescript的入口文件"
     }
   },
+  "sideEffects":"告诉打包器在tree shaking时哪些文件在import时是有副作用的，即使没有使用也不能删除进行tree shaking",
   "scripts": {
     // 存放可执行脚本
     "test": "echo \"Error: no test specified\" && exit 1"
