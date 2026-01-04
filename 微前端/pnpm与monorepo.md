@@ -4,13 +4,45 @@
 
 **硬链接：**前后两份文件指向同一个磁盘地址，两者内容一样
 
-**于npm的区别：**
+## 与npm的区别
 
-依赖存储方式：npm每个项目都有一份node_modules依赖重复存储，占用大量磁盘空间；pnpm所有依赖统一存储在全局~/.pnpm-store，项目中的node_modules使用硬链接指向它，节省空间
+**依赖存储方式：**
 
-安装速度：首次需要远程下载，后续依赖复用
+npm每个项目都有一份node_modules依赖重复存储，占用大量磁盘空间
 
-**优势：**节省磁盘空间并提升安装速度
+pnpm所有依赖统一存储在全局仓库中
+
+```bash
+# 查看pnpm全局仓库位置
+pnpm store path
+# mac:~/Library/pnpm/store
+# win:~/.pnpm-store
+```
+
+每个项目中的node_modules下有一个.pnpm的虚拟仓库，该虚拟仓库.pnpm下的依赖是通过硬链接指向全局仓库的，而每个项目中的node_modules下的依赖包通过符号链接指向当前项目的虚拟仓库.pnpm中的包
+
+```bash
+node_modules/
+├─ .pnpm/
+│  ├─ react@18.2.0/
+│  │  └─ node_modules/
+│  │     └─ react/   ← 真实包文件（hard link）
+│  ├─ lodash@4.17.21/
+│  └─ ...
+├─ react        -> .pnpm/react@18.2.0/node_modules/react
+├─ lodash       -> .pnpm/lodash@4.17.21/node_modules/lodash
+
+```
+
+对于monorepo项目，根目录与每个子包都同理，该包下的node_modules通过该包的虚拟仓库最终指向了同一个底层文件
+
+**安装速度：**
+
+首次需要远程下载，后续依赖复用
+
+**优势：**
+
+节省磁盘空间并提升安装速度
 
 ## 开发实际使用
 
@@ -24,7 +56,7 @@ vscode中的软链接文件，其右侧有一个箭头，这个表示该文件�
 
 ![image-20251002144328279](pnpm与monorepo.assets/image-20251002144328279.png)
 
-在node_modules中会显示安装的vue，我们可以看到安装的vue是一个软链接，指向的是在.pnpm中的vue，.pnpm中的vue通过硬链接的方式指向了.pnpm-store仓库中的包
+在node_modules中会显示安装的vue，我们可以看到安装的vue是一个软链接，指向的是在.pnpm中的vue，.pnpm中的vue通过硬链接的方式指向了全局仓库中的包
 
 ![image-20251002144630810](pnpm与monorepo.assets/image-20251002144630810.png)
 

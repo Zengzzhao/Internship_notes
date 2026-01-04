@@ -58,6 +58,9 @@ npm init xxx与npm create xxx是等价，两者只是别名，可以互换使用
   },
   "devDependencies": {
     // 开发依赖
+  },
+  "peerDependencies":{
+    // 对等依赖:声明这个包运行时依赖的包,不负责安装该依赖,由使用者自行安装
   }
 }
 
