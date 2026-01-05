@@ -1,16 +1,47 @@
+# npm对包的管理
+
+[参考文档](https://juejin.cn/post/7127295203177676837)
+
+**npm2**
+
+npm2对于依赖的管理采样嵌套方式，即node_modules下每个依赖都有自己的node_modules，如下图所示。当多个包之间有共同依赖时，采样嵌套的方式下，相同的依赖会复制多次，占据磁盘空间变多；此外，win的文件路径最大260个字符，嵌套会超过win路径的长度限制
+
+<img src="./pnpm与monorepo.assets/image-20260105113210780.png" alt="image-20260105113210780" style="zoom:30%;" />
+
+**yarn、npm3之后**
+
+采用扁平化结构管理依赖，即node_modules下依赖全部在同一层，但是当一个包出现多个版本时，只会提升最开始的一个到顶层，后面的其他版本的相同包还是采用嵌套方式，这样就解决了依赖重复、路径过长的问题。但是这样会导致幽灵依赖问题，因为依赖全部铺平了放在顶层，所以依赖的依赖可以找到。隐患是如果没有显式安装依赖，当有一天别的包不依赖这个包的时候，代码就不能运行了，因为缺少了依赖
+
+<img src="./pnpm与monorepo.assets/image-20260105113732592.png" alt="image-20260105113732592" style="zoom:40%;" />
+
+> 幽灵依赖：当前项目使用了某个包，但是这个包并没有明确声明在package.json的dependencies中，却恰好能够运行和构建被找到
+>
+> ```
+> // index.js
+> import lodash from 'lodash'
+> // package.json
+> {
+>   "dependencies": {
+>     "react": "^18.0.0"
+>   }
+> }
+> ```
+
+
+
 # pnpm
 
 **软链接/符号链接：**后面的文件只是创建一个指向前面文件的快捷方式
 
-**硬链接：**前后两份文件指向同一个磁盘地址，两者内容一样
+vscode中的软链接文件，其右侧有一个箭头，这个表示该文件是软链接
 
-## 与npm的区别
+![image-20251002143943486](pnpm与monorepo.assets/image-20251002143943486.png)
+
+**硬链接：**前后两份文件指向同一个磁盘地址，两者内容一样
 
 **依赖存储方式：**
 
-npm每个项目都有一份node_modules依赖重复存储，占用大量磁盘空间
-
-pnpm所有依赖统一存储在全局仓库中
+pnpm所有依赖统一存储在全局仓库中，其余项目的依赖采用软、硬链接链接到全局仓库
 
 ```bash
 # 查看pnpm全局仓库位置
@@ -19,7 +50,9 @@ pnpm store path
 # win:~/.pnpm-store
 ```
 
-每个项目中的node_modules下有一个.pnpm的虚拟仓库，该虚拟仓库.pnpm下的依赖是通过硬链接指向全局仓库的，而每个项目中的node_modules下的依赖包通过符号链接指向当前项目的虚拟仓库.pnpm中的包
+每个项目中的node_modules下有一个.pnpm的虚拟仓库、采用非扁平结构排列的在`package.json`中显式定义的依赖（从而避免了幽灵依赖）
+
+虚拟仓库.pnpm下的依赖采用扁平结构，从全局仓库硬链接过来，包和包之间的依赖通过软链接来链接；node_modules下其他依赖通过软链接指向虚拟仓库.pnpm中对应的依赖
 
 ```bash
 node_modules/
@@ -34,31 +67,9 @@ node_modules/
 
 ```
 
-对于monorepo项目，根目录与每个子包都同理，该包下的node_modules通过该包的虚拟仓库最终指向了同一个底层文件
+对于monorepo项目，根目录与每个子包同理，区别在于子包的node_modules下没有一个.pnpm虚拟仓库，所有依赖通过软链接链接到根目录的的虚拟仓库.pnpm中
 
-**安装速度：**
-
-首次需要远程下载，后续依赖复用
-
-**优势：**
-
-节省磁盘空间并提升安装速度
-
-## 开发实际使用
-
-vscode中的软链接文件，其右侧有一个箭头，这个表示该文件是软链接
-
-![image-20251002143943486](pnpm与monorepo.assets/image-20251002143943486.png)
-
-使用命令pnpm init后，会生成pageage.json
-
-之后再使用pnpm i vue安装相应的文件时，会生成一个pnpm-lock.yaml锁定版本号的文件以及node_modules
-
-![image-20251002144328279](pnpm与monorepo.assets/image-20251002144328279.png)
-
-在node_modules中会显示安装的vue，我们可以看到安装的vue是一个软链接，指向的是在.pnpm中的vue，.pnpm中的vue通过硬链接的方式指向了全局仓库中的包
-
-![image-20251002144630810](pnpm与monorepo.assets/image-20251002144630810.png)
+<img src="./pnpm与monorepo.assets/image-20260105144533618.png" alt="image-20260105144533618" style="zoom:50%;" />
 
 ## 命令
 
@@ -859,8 +870,6 @@ export default defineConfig({
 配置好后运行`pnpm test`命令就会去`utils`和`components`子包中找`__test__`测试文件夹下的`xx.test.ts/xx.spec.ts`测试脚本进行测试
 
 
-
-### 发布
 
 
 
