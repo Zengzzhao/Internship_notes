@@ -1,5 +1,7 @@
 # 专业术语
 
+MVC：Model管数据、View管显示、Controller管操作，把数据、界面、控制逻辑分离，降低耦合，便于维护和扩展
+
 Undo：撤销。撤销上一次操作，回到操作前的状态。`command Z`
 
 Redo：重做，重新执行被撤销的操作。`command Y`
@@ -12,13 +14,21 @@ WYSIWYG ：What You See Is What You Get，所见即所得
 
 ProseMirror
 
-Tiptap
+Tiptap：基于ProseMirror，基于该框架开发的产品：Team
 
-Milkdown
+Quill：基于该框架开发的产品：以前的KStack
 
-Quill
+CKEditor：基于该框架开发的产品：CSDN、现在的KStack
 
+Medium Editor：基于该框架开发的产品：稀土掘金
 
+**md编辑器**
+
+Milkdown：基于ProseMirror、Remark
+
+StackEditor：基于该框架开发的产品：CSDN
+
+Bytemd：基于该框架开发的产品：稀土掘金
 
 # ProseMirror
 
@@ -245,9 +255,9 @@ TipTap编辑器的内容可以存储为Json格式/Html字符串，且两者都�
 
 # Quill
 
-底层使用Delta作为数据结构
+## Delta
 
-Delta本质上是一个json，有一个操作数组属性ops
+Quill的内容数据格式，本质上是一个json，只有一个属性ops，ops是一个对象数组，每一项代表对编辑器的一个操作
 
 ```json
 {
@@ -259,9 +269,9 @@ Delta本质上是一个json，有一个操作数组属性ops
 }
 ```
 
-一个操作op由操作和attributes样式组成
+一个操作op由操作和attributes格式两个属性组成
 
-> 操作有三种可能：insert插入、delete删除、retain保留/修改
+> 操作有三种可能：insert插入、delete删除、retain保留
 >
 > arributes分两种：
 >
@@ -283,17 +293,51 @@ Delta本质上是一个json，有一个操作数组属性ops
 > }
 > ```
 >
-> 
 
-## 配置项
+**常见的Detla**
 
-bounds 编辑器内浮框的边界、debug debug级别、formats 格式白名单、placeholder 占位文本、readOnly 只读模式、scrollingContainer 滚动容器、theme 主题、modules 模块：最重要最常用的配置
+```json
+// 插入Hello World
+{
+  ops:[
+    {insert:"Hello World"},
+    {insert:"\n"}
+  ]
+}
+// 将Hello World的World改成红色
+{
+  ops:[
+    {retain:6}, // 保留前面6个字符
+    {retain:5,attributes:{color:"#ff0000"}} // 保留接下来后面5个字符，格式颜色使用#ff0000
+  ]
+}
+// 插入图片
+{
+  ops:[
+    {insert:{ "image": "https://quilljs.com/assets/images/logo.svg" }},
+    {insert:'\n'}
+  ]
+}
+// 插入公式
+{
+  ops:[
+    {insert:{ "formula": "e=mc^2" }},
+    {insert:'\n'}
+  ]
+}
+```
 
-### modules 模块
 
-Quill 一共有6个内置模块：Toolbar 工具栏、Keyboard 快捷键、History 操作历史（每隔1s记录一次操作历史，并放入历史操作栈中（最大100），便于撤销与回退）、Clipboard 粘贴版（处理复制/粘贴事件、html元素节点匹配、html到delta的转换）、Syntax 语法高亮、Uploader 文件上传
 
-模块化机制类似于tiptap的插件机制，自定义模块也是一个对象
+## Parchment与Blot
+
+Parchment是Quill的文档模型，是Quill世界里面的Html+Css；Bolt是组成Parchment的节点。它们决定了文档中哪些结构合法、有什么样的格式
+
+
+
+## Modules
+
+是Quill的功能插件系统，Quill 一共有6个内置模块：Toolbar 工具栏、Keyboard 快捷键、History 操作历史（每隔1s记录一次操作历史，并放入历史操作栈中（最大100），便于撤销与回退）、Clipboard 粘贴版（处理复制/粘贴事件、html元素节点匹配、html到delta的转换）、Syntax 语法高亮、Uploader 文件上传
 
 ```js
 // Counter.js
@@ -314,6 +358,12 @@ const editor = new Quill("#editor", {
     },
   });
 ```
+
+
+
+> 三者的关系：
+>
+> 自定义内容靠Bolt，保存回显靠Delta，交互靠Modules
 
 
 
