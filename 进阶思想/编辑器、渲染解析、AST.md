@@ -339,6 +339,8 @@ Parchment是Quill的文档模型，是Quill世界里面的Html+Css；Bolt是组�
 
 是Quill的功能插件系统，Quill 一共有6个内置模块：Toolbar 工具栏、Keyboard 快捷键、History 操作历史（每隔1s记录一次操作历史，并放入历史操作栈中（最大100），便于撤销与回退）、Clipboard 粘贴版（处理复制/粘贴事件、html元素节点匹配、html到delta的转换）、Syntax 语法高亮、Uploader 文件上传
 
+自定义Modules
+
 ```js
 // Counter.js
 class Counter {
@@ -388,19 +390,35 @@ editor.on('text-change',(delta,oldDelta,source)=>{
 
 
 
+# Babel
+
+@babel/parser——将代码转为AST
+
+@babel/traverse——对AST进行操作
+
+@babel/generator——将AST转为代码文件
+
+
+
 # Markdown渲染
-
-unified生态系统
-
-remark：将Markdown变为AST，转换Markdown
-
-rehype：将Html变为AST，转换Html
 
 Marked、showdown：将Markdown转为Html的解析器
 
 Highlight.js：基于正则的代码高亮库
 
 Shiki：基于 VS Code TextMate 语法的高亮引擎
+
+## unified
+
+unified：一个文本处理的生态系统，其生态中有诸多插件，unified作为一个统一的执行接口将各个插件串联起来，将AST在各阶段流转。有三类接口插件Parser（文本->AST）、Transformer（AST->AST）、Compiler（AST->文本）。Markdown用mdast，HTML用hast
+
+### 插件生态
+
+remark：Markdown相关插件集合
+
+rehype：HTML相关插件集合
+
+retext：自然语言处理相关插件集合
 
 
 
