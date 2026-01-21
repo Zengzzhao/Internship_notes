@@ -400,13 +400,29 @@ editor.on('text-change',(delta,oldDelta,source)=>{
 
 
 
-# Markdown渲染
+# Markdown解析渲染
 
 Marked、showdown：将Markdown转为Html的解析器
 
 Highlight.js：基于正则的代码高亮库
 
 Shiki：基于 VS Code TextMate 语法的高亮引擎
+
+## marked
+
+marked本质上是一个正则驱动的匹配解析引擎
+
+**marked工作原理：**
+
+词法分析Lexer（lexical analyzer词法分析器的简写），顺序遍历md文本字符串，用正则匹配语法片段，将字符串拆解成一个个有意义的单元token，最终得到一个线性token序列
+
+语法分析Parser，遍历词法分析得到的线性token序列，生成一个结构化token（不是AST，AST是可逆的树形结构，可以根据AST还原原来的）
+
+渲染Render，把结构化token转成html
+
+> Lexer是一个基于DFA（Deterministic finite automaton）确定有限状态机的词法分析器
+
+
 
 ## unified
 
