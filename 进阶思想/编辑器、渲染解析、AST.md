@@ -48,11 +48,15 @@ Prosemirror-transform：用可记录和可重放的方式修改文档的功能�
 
 ## 核心概念
 
-Schema：定义文档可以有哪些内容，由Node和Mark组成，Node是文档中的某个内容元素，如 `doc`、`paragraph`、`text`；Mark是附着在text文本节点上的样式，如 `bold`、`italic`、`underline`。
+### Schema
+
+定义文档可以有哪些内容，由Node和Mark组成，Node是文档中的某个内容元素，如 `doc`、`paragraph`、`text`；Mark是附着在text文本节点上的样式，如 `bold`、`italic`、`underline`。
 
 > 文档树中节点分为两类：Node（类型结构节点，以纯文本节点作为子节点，比如'paragraph'、'heading'），TextNode（纯文本节点，没有子节点，即叶子节点，比如'hello'、'你好'等）
 
-State：文档存储在state中，所有对编辑器的操作都通过transaction应用到state上。state包含了当前文档doc、当前光标选区selection、当前激活的标记storedMarks、插件状态pluginStates
+### State
+
+文档存储在state中，所有对编辑器的操作都通过transaction应用到state上。state包含了当前文档doc、当前光标选区selection、当前激活的标记storedMarks、插件状态pluginStates
 
 ```
 state.doc:当前文档
@@ -95,11 +99,17 @@ state.tr:创建一个新的 Transaction
 >
 > 
 
-Transaction：所有对编辑器的操作都必须通过Transaction完成，提交Transaction生成一个新的state更新视图
+### Transaction
 
-Plugin：提供了props（提供钩子，拦截dom事件）、state（插件自己的state）、view（视图生命周期）
+所有对编辑器的操作都必须通过Transaction完成，提交Transaction生成一个新的state更新视图
 
-Decoration：不属于schema，仅用于UI显示
+### Plugin
+
+提供了props（提供钩子，拦截dom事件）、state（插件自己的state）、view（视图生命周期）
+
+### Decoration
+
+不属于schema，仅用于UI显示
 
 > 装饰器允许你控制视图绘制文档的方式
 >
@@ -117,9 +127,13 @@ Decoration：不属于schema，仅用于UI显示
 >
 > 
 
-InputRules：输入规则
+### InputRules
 
-EditorView：渲染文档结构为真实dom
+输入规则
+
+### EditorView
+
+渲染文档结构为真实dom
 
 
 
@@ -152,39 +166,53 @@ editor.chain().xxx1().xxx2().xxx3().run()
 
 
 
-## 三大件
+## Extension扩展
 
-### Node
+可以通过`Extension.create`创建不修改schema的扩展，仅仅添加功能、改变编辑器行为，也可以通过`Node.create`、`Mark.create`创建节点、标记扩展
+
+### Extension的api
+
+**name：**声明扩展名称
+
+**priority：**优先级，决定扩展的注册顺序，优先级高的扩展优先运行
+
+**addOptions()：**设置扩展的配置，用户可以在注册扩展时通过configure()配置扩展的配置项
+
+**addCommands()：**注册命令，可通过 `editor.commands.xxx()` 调用
+
+**addInputRules()：**
+
+功能：定义输入触发规则，在用户通过编辑器真实输入且没有被阻止的情况下才会触发输入规则进行匹配（如果在特定按键输入的拦截中return true阻止了默认字符输入则不会触发输入规则；通过命令`insertContent()`编程式插入也不会触发输入规则），用于自动转换输入（如 `**bold**`）
+
+多个扩展的输入规则的执行先后顺序：priority高的优先执行，priority相同时按照扩展注册的顺序执行，先匹配到的规则将后续规则短路
+
+与键盘监听的执行先后顺序：晚于addKeyboardShortcuts键盘监听执行
+
+**addPasteRules()：**定义粘贴触发规则，用于粘贴内容自动格式化
+
+**addKeyboardShortcuts()：**
+
+功能：定义快捷键（如 `Cmd+B` 加粗）、拦截特定的按键输入进行特殊处理
+
+返回值：返回true表示当前键盘输入已经被扩展处理，阻止默认的字符输入，并阻断后续扩展的同键处理；返回false表示不会阻止默认字符输入，同时交给下一个扩展继续处理
+
+多个扩展对相同按键拦截的执行先后顺序：priority高的优先执行，priority相同时按照扩展注册的逆序执行，后注册的扩展先执行
+
+与输入规则的执行先后顺序：先于addInputRules输入规则执行
+
+**addProseMirrorPlugins()：**注入原生 PM 插件  高级行为定制
+
+**addStorage()：**创建一个当前扩展可用的存储空间
+
+**各种事件：**`onBeforeCreate,onCreate,onUpdate,onSelectionUpdate,onTransaction,onFocus,onBlur,onDestroy`
+
+**dispatchTransaction：**事务派发前拦截并修改它们
 
 
 
-### Mark
+### Node特有api
 
-
-
-### Extension
-
-tiptap所有功能通过extension实现
-
-### 常用钩子
-
-#### 属性
-
-name：声明扩展名称
-
-priority：优先级，决定扩展的注册顺序，优先级高的扩展优先运行
-
-inclusive：标记是否节点的起始点、结束点，为true时表示包含左右边界点，此时光标在右边界继续输入会继承此标记
-
-#### addOptions()
-
-设置扩展的配置，用户可以在注册扩展时通过configure()在置扩展的配置项
-
-#### addAttributes()
-
-在Node/Mark中声明可以存在于schema中的属性/数据以及其默认值、html解析规则、html渲染规则
-
-相当于给Node/Mark增加字段，被存进prosemirror的schema中，能写入dom元素中并从dom元素中解析出来，可以通过commands修改
+**addAttributes()：**在Node/Mark中声明可以存在于schema中的属性/数据以及其默认值、html解析规则、html渲染规则。相当于给Node/Mark增加字段，被存进prosemirror的schema中，能写入dom元素中并从dom元素中解析出来，可以通过commands修改
 
 ```ts
 // 基本结构如下
@@ -199,49 +227,83 @@ addAttributes(){
 }
 ```
 
+**parseHTML()：**定义如何从Html中解析出该node，对应schema中的parseDOM
+
+**renderHTML()**
+
+定义节点在Html中如何渲染，对应shcema中的toDOM
+
+返回DOMOutputSpec（一个数组），第一个值为html标签名称，第二个值为一个对象，表示最终添加到该html标签上的属性，第三个值表示节点中的内容是什么。为0时表示子内容占位符，会渲染子内容；为字符串、数字时渲染这些纯静态内容；也可以嵌套写DOMOutputSpec
+
+**topNode：**节点是否为顶级节点
+
+**content**：定义节点内允许包含哪些节点
+
+**marks**：定义节点内的内容允许哪些mark
+
+**group**：给节点分组，供content规则使用
+
+**inline**：是否是行内节点
+
+**atom**：是否是不可拆分的原子节点
+
+**selectable**：node是否可被鼠标单击选中
+
+**draggable**：是否支持拖拽
+
+**code**：此node内是代码语义，直接原样输入、原样输出，不让编辑器对内容做任何修饰修改
+
+**whitespace**：空格和换行要不要保留，默认为normal将折叠空白字符
+
+**defining**：当文档结构改变时，这个节点是否保留
+
+```html
+在
+heading
+标题文本前输入一个空格，变为
+ heading
+如果defining为false，其不在是一个标题，变为一个文本了
+如果defining为true，其仍是一个标题
+```
+
+**allowGapCursor**：是否运行光标停在节点之间的间隙中
+
+**linebreakReplacement：**当解析文本中的\n时，用什么节点替代这个换行
 
 
-#### parseHTML()
 
-HTML → Doc  解析外部内容（setContent、paste）
+### Mark特有api
 
-#### renderHTML()
+**addAttributes()**
 
-Doc → HTML  导出 HTML 时使用
+**parseHTML()**
 
-#### addCommands()
+**renderHTML()**
 
-注册命令  可通过 `editor.commands.xxx()` 调用
+**keepOnSplit**：节点被拆分时，默认内容中的标记被移除，设置为true后在新节点上保留节点
 
-#### addInputRules()
+**inclusive**：光标在该mark边界时，新输入的文字是否继承该mark
 
-**功能：**定义输入触发规则，在用户通过编辑器真实输入且没有被阻止的情况下才会触发输入规则进行匹配（如果在特定按键输入的拦截中return true阻止了默认字符输入则不会触发输入规则；通过命令`insertContent()`编程式插入也不会触发输入规则），用于自动转换输入（如 `**bold**`）
+**excludes**：该mark与哪些mark互斥
 
-**多个扩展的输入规则的执行先后顺序：**priority高的优先执行，priority相同时按照扩展注册的顺序执行，先匹配到的规则将后续规则短路
+**exitable**：光标在该mark边界时，是否允许方向键退出该mark
 
-**与键盘监听的执行先后顺序：**晚于addKeyboardShortcuts键盘监听执行
+**group**：给mark分组
 
-#### addPasteRules()
+**spanning**：同一个mark是否可以跨越相邻节点合并
 
-定义粘贴触发规则，用于粘贴内容自动格式化
+```html
+spanning=true时
+<strong>foo</strong><strong>bar</strong>
+会被合并为
+<strong>foobar</strong>
+```
 
-#### addKeyboardShortcuts()
+**code**：此mark内是代码语义，直接原样输入、原样输出，不让编辑器对内容做任何修饰修改
 
-**功能：**定义快捷键（如 `Cmd+B` 加粗）、拦截特定的按键输入进行特殊处理
 
-**返回值：**返回true表示当前键盘输入已经被扩展处理，阻止默认的字符输入，并阻断后续扩展的同键处理；返回false表示不会阻止默认字符输入，同时交给下一个扩展继续处理
 
-**多个扩展对相同按键拦截的执行先后顺序：**priority高的优先执行，priority相同时按照扩展注册的逆序执行，后注册的扩展先执行
-
-**与输入规则的执行先后顺序：**先于addInputRules输入规则执行
-
-#### addProseMirrorPlugins()
-
-注入原生 PM 插件  高级行为定制
-
-#### 事件
-
-### 核心方法
+## 核心方法
 
 getMarkRange(ResolvedPos,markType)：传入一个ResolvedPos和某个mark类型，返回该mark的整体范围{from:number,to:number}，用于快速获取整个mark边界进行整体删除、替换等操作
 
@@ -249,7 +311,7 @@ getMarkRange(ResolvedPos,markType)：传入一个ResolvedPos和某个mark类型�
 
 ## 保存与回写
 
-TipTap编辑器的内容可以存储为Json格式/Html字符串，且两者都可以传入编辑器进行内容回写。使用`getJSON()`即可获得编辑器中富文本内容的Json格式，使用`getHTML()`即可获得编辑器中富文本内容的Html字符串
+TipTap编辑器的内容可以存储为json格式、html字符串，且两者都可以传入编辑器将内容回写。使用`getJSON()`即可获得编辑器中富文本内容的Json格式，使用`getHTML()`即可获得编辑器中富文本内容的Html字符串
 
 
 
