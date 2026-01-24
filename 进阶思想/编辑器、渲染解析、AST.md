@@ -8,6 +8,18 @@ Redo：重做，重新执行被撤销的操作。`command Y`
 
 WYSIWYG ：What You See Is What You Get，所见即所得
 
+IME：Input Method Editor输入法编辑器，暂存键入的拼音，选字完毕后一次性上屏
+
+
+
+# 原生事件
+
+compositionstart：开始拼音
+
+compositionupdate：拼音变化，每次该事件后都会顺序触发beforeinput、input事件
+
+compositionend：选字上屏
+
 
 
 # 常见编辑器框架
