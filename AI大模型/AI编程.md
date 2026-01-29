@@ -1,3 +1,9 @@
+一次聊天token组成：system prompt+用户问题+rules+对话历史+工具调用花费的token
+
+IDE在的代码库检索Codebase Indexing，就是对整个代码仓库做RAG（将代码转换为可搜索的向量）
+
+
+
 # Prompt
 
 **System prompt：**描述当前AI的角色、性格、背景信息等定位（非用户想直接发生的消息）
@@ -13,6 +19,12 @@
 
 
 # MCP
+
+
+
+
+
+# Rules
 
 
 
