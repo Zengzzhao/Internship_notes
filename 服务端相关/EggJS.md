@@ -36,3 +36,31 @@ Egg启动一个loader加载config文件夹下的配置，先读取config.default
 
 ```
 
+
+
+# 洋葱模型下中间件逻辑生效顺序
+
+中间件1---->中间件2---->路由控制器命中，调用service---->中间件2---->中间件1
+
+完整的一次请求有进入、出来两段轨迹。
+
+执行某个中间件过程：
+
+先从上至下执行该中间件到next()之前的代码（进入轨迹）
+
+执行到next时结束进入轨迹，将控制权交给后面一层处理，当设置了ctx.body、ctx.status时结束
+
+执行中间件next()之后的代码（出来轨迹）
+
+
+
+# ctx
+
+每次收到用户请求时，框架会实例化一个ctx对象，封装了本次请求的信息，并提供了便捷方法获取请求参数、设置响应信息
+
+- 请求相关：`ctx.request`、`ctx.method`、`ctx.path`、`ctx.query`、`ctx.headers`
+- 响应相关：`ctx.status`、`ctx.body`、`ctx.type`、`ctx.set(...)`
+- Egg 扩展：`ctx.logger`、`ctx.service`、`ctx.model`
+
+
+

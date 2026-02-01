@@ -201,3 +201,13 @@ rabbitmq-server.bat start
 <img src="node.assets/image-20250316170936780.png" alt="image-20250316170936780" style="zoom:50%;" />
 
 之后操作MQ可见官网
+
+
+
+# 部署
+
+## PM2
+
+PM2：process manager2，管理node.js进程的工具
+
+虽然使用node app.js也能跑起来一个应用，但是存在以下问题：终端一关应用就停；服务器重启应用无法自动重启；不能多核跑等
