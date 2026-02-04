@@ -116,7 +116,7 @@ python3
 
 即可运行python
 
-
+而在windows、Linux安装了python后直接通过终端输入python即可运行python，而不是python3。因为mac自带了老旧的python2，而系统底层依赖于python2，所以苹果选择保持现状，为了区分所有需要输入python3
 
 
 
