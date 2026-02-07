@@ -104,6 +104,8 @@ pnpm -r [xxx命令]
 pnpm --filter 子包路径/子包名 [xxx命令]
 ```
 
+pnpx：pnpm package execute，其功能同npx（Node package execute），临时下载并执行npm包，而无需将包安装到项目或者全局环境中。也是pnpm dlx（download and execute）的别名
+
 
 
 # monorepo工程管理
