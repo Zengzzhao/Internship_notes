@@ -64,6 +64,26 @@ Claude Code Guide：使用Haiku模型，当提出关于Claude Code功能的问�
 
 
 
+# RAG
+
+## 索引Index
+
+步骤：
+
+将知识内容分割Split
+
+嵌入Embedding：使用嵌入模型将文本内容转换为一个嵌入向量，核心逻辑就是将文本token化，对每个token计算其嵌入向量，将文本对应的所有嵌入向量池化得到一个平均嵌入向量
+
+存储Storage：存储嵌入结果到向量数据库
+
+## 检索Retrieval
+
+将用户的问题与建立的索引进行匹配，得到相关度高的结果
+
+## 生成Generation
+
+将匹配到的知识与用户问题混合给LLM，得到最终结果
+
 
 
 # Rules
