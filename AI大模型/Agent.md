@@ -278,6 +278,185 @@ Claude Code Guide：使用Haiku模型，当提出关于Claude Code功能的问�
 
 # MCP
 
+**MCP是一套标准协议， 它规定了应用程序之间如何通信**
+
+## 通信方式
+
+stdio（**st**an**d**ard **i**nput and **o**utput 标准输入输出）：推荐，高效、简洁、本地
+
+
+
+<img src="https://resource.duyiedu.com/yuanjin/202507121302745.png" alt="image-20250712130252722" style="zoom: 33%;" />
+
+<img src="https://resource.duyiedu.com/yuanjin/202507121308463.png" alt="image-20250712130835444" style="zoom:33%;" />
+
+http：可远程
+
+## 通信格式
+
+基于JSON-RPC的进一步规范
+
+JSON-RPC：一种远程过程调用（RPC，Remote Procedure Call）协议，使用Json作为数据格式，通过网络调用远程服务器上的方法
+
+```json
+请求
+{
+  "jsonrpc": "2.0",
+  "method": "sum",
+  "params": {
+    "a": 5,
+    "b": 6
+  },
+  "id": 1
+}
+响应
+{
+  "jsonrpc": "2.0",
+  "result": 11,
+  "id": 1
+}
+```
+
+## 基本规范
+
+初始化 `initialize`
+`request`
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "initialize", // 固定为 initialize
+  "params": {
+    "protocolVersion": "2024-11-05",
+    "capabilities": {
+      "roots": {
+        "listChanged": true
+      },
+      "sampling": {},
+      "elicitation": {}
+    },
+    "clientInfo": { // 告知服务器客户端的信息
+      "name": "ExampleClient",
+      "title": "Example Client Display Name",
+      "version": "1.0.0"
+    }
+  }
+}
+```
+
+`response`
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1, 
+  "result": {
+    "protocolVersion": "2024-11-05",
+    "capabilities": {
+      "logging": {},
+      "prompts": {
+        "listChanged": true
+      },
+      "resources": {
+        "subscribe": true,
+        "listChanged": true
+      },
+      "tools": {
+        "listChanged": true
+      }
+    },
+    "serverInfo": { // 服务端信息
+      "name": "ExampleServer",
+      "title": "Example Server Display Name",
+      "version": "1.0.0"
+    },
+    "instructions": "Optional instructions for the client"
+  }
+}
+```
+
+工具发现 `tools/list`
+
+服务器有哪些工具函数可以供客户端调用
+
+`request`
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/list",
+  "params": {}
+}
+```
+
+`response`
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "tools": [
+      {
+        "name": "get_weather",
+        "title": "Weather Information Provider",
+        "description": "Get current weather information for a location",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "location": {
+              "type": "string",
+              "description": "City name or zip code"
+            }
+          },
+          "required": ["location"]
+        }
+      }
+    ]
+  }
+}
+```
+
+工具调用 `tools/call`
+`request`
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/call", // 调用工具
+  "params": {
+    "name": "get_weather", // 工具名，对应工具发现中的name
+    "arguments": { // 工具参数，需要和工具发现中的结构一致
+      "location": "New York" 
+    }
+  }
+}
+```
+
+`resonse`
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "content": [{ // 函数结果需要放到content字段中，如果有多个，使用数组
+      // 函数结果的类型
+      // 支持的类型： https://modelcontextprotocol.io/specification/2025-06-18/server/tools#tool-result
+      "type": "text", 
+      "text": "72°F" 
+    }]
+  }
+}
+```
+
+
+
+
+
 
 
 # RAG
