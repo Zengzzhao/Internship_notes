@@ -49,6 +49,10 @@ npm init xxx与npm create xxx是等价，两者只是别名，可以互换使用
       "types":"指定typescript的入口文件"
     }
   },
+  "bin":{
+    // 声明包提供的可执行命令、命令对应的入口文件
+    "可执行命令":"命令对应的入口文件"
+  },
   "sideEffects":"告诉打包器在tree shaking时哪些文件在import时是有副作用的，即使没有使用也不能删除进行tree shaking",
   "scripts": {
     // 存放可执行脚本
@@ -101,7 +105,7 @@ npx是一个命令行工具，它是npm 5.2.0版本中新增的功能。它允�
 
 - 先从当前项目的node_modules/.bin去查找可执行命令xxx
 - 如果没找到就去全局的node_modules 去找可执行命令xxx
-- 如果还没找到就去npm官网上下载，之后用完之后删除 
+- 如果还没找到就去npm官网上下载包，然后执行package.json中bin字段对应的文件运行，用完之后删除 
 
 ### 使用npx的例子——以nodemon为例子
 
