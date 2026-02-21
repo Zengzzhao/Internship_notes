@@ -160,6 +160,32 @@ MoE：混合专家模型
 
 
 
+# 注意力机制
+
+几个不同句子中的同一个token向量化（Input Embedding）得到的嵌入向量都是同一个泛型向量 ，没有参考上下文，只包含这个词本身的含义
+
+通过位置编码（Positional Encoding），在向量中加入位置信息
+
+通过Attention获取到了周围的信息后，各个泛型向量移动位置变为包含了上下文语境的向量
+
+Attention例子：
+
+一个名词问"我前面有形容词吗？"，这形成一个查询；前面的形容词回答"有的，我在这。"，这形成一个回答键
+
+使用查询矩阵Wq（模型参数）与所有token的嵌入向量相乘得到每个token的查询向量Q 
+
+使用键矩阵Wk（模型参数）与所有token的嵌入向量相乘得到每个token的回答键向量K
+
+计算所有token的查询向量与所有token的回答键的点积（点积后在除以查询-回答键空间维度的平方根），值越大说明查询与回答键的越相关
+
+掩码：因为transformer是预测当前词后面一个词的，要避免后面的词影响前面的词看到答案，所有将当前矩阵左下角（后面token的回答键与前面token的查询的点积）置为负无穷，softmax后就变为0
+
+逐列将值进行Softmax进行归一化（一列中所有值之和为1，每个值介于0-1之间）
+
+<img src="./Agent.assets/image-20260221234148016.png" alt="image-20260221234148016" style="zoom:30%;" />
+
+
+
 # transformer
 
 <img src="./Agent.assets/image-20260212183455551.png" alt="image-20260212183455551" style="zoom:50%;" />
@@ -210,13 +236,11 @@ TRPO（Trust Region Policy Optmization）
 
 
 
-# agent智能体与workflow工作流
+# 智能体与工作流
 
 智能体：大模型根据任务需求自主规划执行流程、工具调用，独立完成一项任务的系统
 
 工作流：通过预定的流程来协调大模型与工具的系统，大模型只是工作流中的一个组件，只能按照预设的流程走
-
-## 工作流
 
 
 
@@ -272,13 +296,24 @@ Claude Code Guide：使用Haiku模型，当提出关于Claude Code功能的问�
 
 # Function Call
 
+Function Call 是一种实现 LLM 连接外部工具的机制。调用 LLM 时，调用方描述函数（包括函数的功能描述、请求参数说明、响应参数说明），LLM 根据用户的输入，选择调用某个函数，并将用户的自然语言转换为调用函数的请求参数，函数名与参数通过 JSON 格式返回给调用方。调用方使用 LLM 返回的函数名称和参数，调用函数并得到响应，之后将响应传给 LLM，从而获得自然语言的回答
 
+**大模型的function call能力是如何获得的？**
+
+对基础模型进行sft获得，教会LLM两件事：识别意图（理解用户的请求是否需要借助外部工具/函数来完成，而不是直接生成文本回答）、参数提取与格式化（如果需要调用函数，要正确地从用户请求中抽取出所需的参数，并按照预先定义的格式（通常是json）生成函数调用的指令）
+
+sft的过程如下：
+
+- 步骤 1：数据集构建：构建包含 Function Calling 场景的指令微调数据集，每条数据样本包含用户输入（可能需调用函数或直接回答的请求）、可用函数 / 工具描述（函数用途、参数类型等结构化文本）、期望输出（需调用函数时为含函数名与参数的 Json，否则为文本回答）。
+- 步骤 2：选择基础模型：选用具有指令遵循能力的预训练大模型（如 Llama、GPT、Qwen 等）。
+- 步骤 3：格式化训练数据：将 “用户输入” 与 “可用函数描述” 拼接为模型输入（Prompt），“期望输出”（Json 函数调用或文本回答）作为目标输出（Completion/Target）。
+- 步骤 4：进行微调：使用标准 SFT 方法（全参数微调或 PEFT 如 LoRA）在数据集上训练，优化目标为最小化预测输出与期望输出的差异（如交叉熵损失），使模型学会根据输入与函数描述，决定直接回答或生成特定格式的函数调用 Json。
 
 
 
 # MCP
 
-**MCP是一套标准协议， 它规定了应用程序之间如何通信**
+**MCP定义了一套标准化的工具发现、调用和管理机制， 它规定了应用程序之间如何通信**
 
 ## 通信方式
 
@@ -298,164 +333,13 @@ http：可远程
 
 JSON-RPC：一种远程过程调用（RPC，Remote Procedure Call）协议，使用Json作为数据格式，通过网络调用远程服务器上的方法
 
-```json
-请求
-{
-  "jsonrpc": "2.0",
-  "method": "sum",
-  "params": {
-    "a": 5,
-    "b": 6
-  },
-  "id": 1
-}
-响应
-{
-  "jsonrpc": "2.0",
-  "result": 11,
-  "id": 1
-}
-```
+## MCP与function call的区别
 
-## 基本规范
+MCP支持动态工具发现，模型可以在运行时发现新的可用工具，无需重新训练或部署。function calling需要将工具函数直接集成到模型代码中，工具更新需要重新部署整个系统
 
-初始化 `initialize`
-`request`
+MCP提供了标准化的工具接口定义，包括工具名称、描述、参数格式、返回值等，确保工具调用的规范性。function calling缺乏标准化的工具管理机制，不同工具的参数格式、返回值格式可能不一致
 
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "initialize", // 固定为 initialize
-  "params": {
-    "protocolVersion": "2024-11-05",
-    "capabilities": {
-      "roots": {
-        "listChanged": true
-      },
-      "sampling": {},
-      "elicitation": {}
-    },
-    "clientInfo": { // 告知服务器客户端的信息
-      "name": "ExampleClient",
-      "title": "Example Client Display Name",
-      "version": "1.0.0"
-    }
-  }
-}
-```
-
-`response`
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1, 
-  "result": {
-    "protocolVersion": "2024-11-05",
-    "capabilities": {
-      "logging": {},
-      "prompts": {
-        "listChanged": true
-      },
-      "resources": {
-        "subscribe": true,
-        "listChanged": true
-      },
-      "tools": {
-        "listChanged": true
-      }
-    },
-    "serverInfo": { // 服务端信息
-      "name": "ExampleServer",
-      "title": "Example Server Display Name",
-      "version": "1.0.0"
-    },
-    "instructions": "Optional instructions for the client"
-  }
-}
-```
-
-工具发现 `tools/list`
-
-服务器有哪些工具函数可以供客户端调用
-
-`request`
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "tools/list",
-  "params": {}
-}
-```
-
-`response`
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "result": {
-    "tools": [
-      {
-        "name": "get_weather",
-        "title": "Weather Information Provider",
-        "description": "Get current weather information for a location",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "location": {
-              "type": "string",
-              "description": "City name or zip code"
-            }
-          },
-          "required": ["location"]
-        }
-      }
-    ]
-  }
-}
-```
-
-工具调用 `tools/call`
-`request`
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 2,
-  "method": "tools/call", // 调用工具
-  "params": {
-    "name": "get_weather", // 工具名，对应工具发现中的name
-    "arguments": { // 工具参数，需要和工具发现中的结构一致
-      "location": "New York" 
-    }
-  }
-}
-```
-
-`resonse`
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 2,
-  "result": {
-    "content": [{ // 函数结果需要放到content字段中，如果有多个，使用数组
-      // 函数结果的类型
-      // 支持的类型： https://modelcontextprotocol.io/specification/2025-06-18/server/tools#tool-result
-      "type": "text", 
-      "text": "72°F" 
-    }]
-  }
-}
-```
-
-
-
-
+MCP支持跨应用的工具共享，一个MCP服务器可以被多个客户端使用。function calling只能在单个应用中使用
 
 
 
@@ -497,7 +381,9 @@ JSON-RPC：一种远程过程调用（RPC，Remote Procedure Call）协议，使
 
 ## 与MCP的区别
 
-skills就是简单的md文件；mcp创建需要编程、服务器配置
+skills是AI的行为规范层，负责帮AI固定化专业流程完成任务（期间可以通过MCP连接外部系统来完成工作）；MCP是Agent与外部系统的标准化交互接口，负责AI连接外部世界（Agent连接数据库、github等）
 
-skills是渐进式加载按需加载工具；mcp在启用时就需要加载该mcp下所有工具
+skills就是简单的md文件；MCP创建需要编程、服务器配置
+
+skills是渐进式加载按需加载工具；MCP在启用时就需要加载该MCP下所有工具
 
