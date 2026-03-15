@@ -8,6 +8,20 @@ xml高亮
 
 浮层（1.输入{{}}弹出浮层展示当前智能体设置的配置、自定义变量，选中后回填到编辑器；2.点击浮层中的管理自定义变量按钮，弹出管理自定义变量弹窗可对变量的类型、变量名、是否必填、默认值、描述等信息crud，保存后同步到编辑器的自定义变量中）
 
+
+
+# 约定
+
+## 数据格式约定
+
+**编辑器内容格式**：
+
+- 传递给编辑器的内容为纯文本 (text)
+- 编辑器传出的内容也是纯文本 (text)
+- 编辑器内部自动将纯文本处理渲染成 HTML 到页面
+
+
+
 # 应用场景
 
 ## 应用模块
@@ -73,6 +87,261 @@ xml高亮
 ### 弹窗侧更新
 
 窗删内变量直接覆盖之前的实际变量
+
+
+
+# 未来
+
+## 变量系统增强
+
+### 变量类型扩展
+
+**当前支持**：
+
+- `text-input`: 普通文本变量
+- `file`: 文件类型变量（`image::`、`video::`、`audio::` 前缀）
+
+**扩展方向**：
+
+```typescript
+// 新增变量类型
+enum VariableType {
+  TEXT = 'text',
+  FILE = 'file',
+  SELECT = 'select',        // 下拉选择
+  MULTI_SELECT = 'multi-select', // 多选
+  DATE = 'date',            // 日期
+  NUMBER = 'number',        // 数字
+  JSON = 'json',            // JSON 对象
+  CODE = 'code'             // 代码块
+}
+
+// 变量配置扩展
+interface VariableConfig {
+  key: string;
+  type: VariableType;
+  defaultValue?: any;
+  options?: Array<{ label: string; value: any }>; // 用于 select
+  validation?: {
+    required?: boolean;
+    min?: number;
+    max?: number;
+    pattern?: RegExp;
+    custom?: (value: any) => boolean | string;
+  };
+  display?: {
+    label?: string;
+    placeholder?: string;
+    description?: string;
+  };
+}
+```
+
+**实现要点**：
+
+1. 扩展 `VariableMark` 解析变量类型语法：
+
+   ```
+   {{userName}}           // 默认 text
+   {{age:number}}         // 数字类型
+   {{gender:select}}      // 下拉选择
+   {{tags:multi-select}}  // 多选
+   ```
+
+2. `PromptParameterEditor` 根据类型动态渲染输入组件：
+
+   ```vue
+   <component
+     :is="getInputComponent(variable.type)"
+     v-model="variables[key]"
+     v-bind="getInputProps(variable)"
+   />
+   ```
+
+### 变量依赖与联动
+
+**场景**：变量 B 的可选项依赖于变量 A 的值。
+
+```typescript
+interface VariableDependency {
+  target: string;  // 目标变量
+  source: string;  // 依赖的源变量
+  transform: (sourceValue: any) => any; // 转换函数
+}
+
+// 示例：城市依赖于省份
+const dependencies: VariableDependency[] = [
+  {
+    target: 'city',
+    source: 'province',
+    transform: (province) => getCitiesByProvince(province)
+  }
+];
+```
+
+### 变量模板库
+
+**功能**：保存常用变量组合为模板。
+
+```typescript
+interface VariableTemplate {
+  id: string;
+  name: string;
+  description: string;
+  variables: Record<string, VariableConfig>;
+  tags: string[];
+}
+
+// 使用场景
+const emailTemplate: VariableTemplate = {
+  id: 'email-001',
+  name: '邮件发送模板',
+  variables: {
+    'recipient': { type: 'text', validation: { required: true, pattern: EMAIL_REGEX } },
+    'subject': { type: 'text', validation: { required: true } },
+    'body': { type: 'text', validation: { required: true } }
+  }
+};
+```
+
+## 编辑器功能增强
+
+### 条件渲染语法
+
+**需求**：支持根据变量值动态显示不同内容。
+
+```
+{{#if isPremiumUser}}
+  尊敬的高级会员，您好！
+{{else}}
+  尊敬的用户，您好！
+{{/if}}
+```
+
+**实现思路**：
+
+1. 创建 `ConditionalBlock` Node Extension
+2. 解析 `{{#if}}` `{{else}}` `{{/if}}` 语法
+3. 在最终渲染时根据变量值选择分支
+
+```typescript
+export const ConditionalBlock = Node.create({
+  name: 'conditionalBlock',
+  group: 'block',
+  content: 'block+',
+  addAttributes() {
+    return {
+      condition: { default: '' },
+      branch: { default: 'if' } // 'if' | 'else'
+    };
+  },
+  parseHTML() {
+    return [{ tag: 'div[data-conditional-block]' }];
+  },
+  renderHTML({ node, HTMLAttributes }) {
+    return ['div', { ...HTMLAttributes, 'data-conditional-block': '' }, 0];
+  }
+});
+```
+
+### 循环渲染语法
+
+**需求**：支持遍历数组变量。
+
+```
+{{#each products}}
+  - {{this.name}}: {{this.price}}
+{{/each}}
+```
+
+**实现思路**：
+
+1. 创建 `LoopBlock` Node Extension
+2. 解析 `{{#each}}` `{{/each}}` 语法
+3. 在渲染时重复内容块
+
+## 协同编辑
+
+### 实时协作
+
+**技术方案**：
+
+- **Yjs + y-prosemirror**：分布式 CRDT 算法
+- **WebSocket**：实时通信
+- **Hocuspocus**：Yjs 后端服务
+
+```typescript
+import { ySyncPlugin, yCursorPlugin, yUndoPlugin } from 'y-prosemirror';
+import * as Y from 'yjs';
+import { WebsocketProvider } from 'y-websocket';
+
+const ydoc = new Y.Doc();
+const provider = new WebsocketProvider('ws://localhost:1234', 'prompt-editor', ydoc);
+
+const editor = useEditor({
+  extensions: [
+    // ... 其他扩展
+    ySyncPlugin(ydoc.getXmlFragment('prosemirror')),
+    yCursorPlugin(provider.awareness),
+    yUndoPlugin()
+  ]
+});
+```
+
+### 版本历史
+
+**功能**：记录编辑历史，支持回溯。
+
+```typescript
+interface EditorVersion {
+  id: string;
+  timestamp: number;
+  content: string;
+  variables: Record<string, string>;
+  author: { id: string; name: string };
+  comment?: string;
+}
+
+// 自动保存版本
+let autoSaveTimer: any;
+watch(modelContent, () => {
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(() => {
+    saveVersion({
+      content: modelContent.value,
+      variables: variables.value
+    });
+  }, 5000); // 5秒后自动保存
+});
+```
+
+## 性能优化
+
+### 延迟加载装饰器
+
+**优化**：只为可见区域的变量渲染编辑按钮。
+
+```typescript
+addProseMirrorPlugins() {
+  return [
+    new Plugin({
+      props: {
+        decorations: state => {
+          const { from, to } = getVisibleRange(state); // 获取可见区域
+          const editBtns: Decoration[] = [];
+          state.doc.nodesBetween(from, to, (node, pos) => {
+            // 只处理可见区域内的节点
+            if (hasVariableMark(node)) {
+              editBtns.push(createEditButton(node, pos));
+            }
+          });
+          return DecorationSet.create(state.doc, editBtns);
+        }
+      }
+    })
+  ];
+}
+```
 
 
 
